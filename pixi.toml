@@ -1,0 +1,20 @@
+[workspace]
+authors = ["Your Name <you@example.com>"]
+channels = ["conda-forge"]
+name = "ia_PoC_002"
+platforms = ["win-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = "3.12.*"
+bioio = ">=3.3.0,<4"
+scikit-image = ">=0.24"
+scipy = ">=1.13"
+matplotlib = ">=3.9"
+napari = ">=0.5"
+pyqt = ">=5"
+
+[pypi-dependencies]
+bioio-czi = ">=2.7.0, <3"

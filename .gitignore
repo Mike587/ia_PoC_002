@@ -1,0 +1,14 @@
+# pixi environment (regenerated from pixi.toml / pixi.lock)
+.pixi/
+__pycache__/
+
+# Claude Code working directories / worktrees
+.claude/
+
+# input data and analysis results (large / regenerated)
+*.czi
+output_*/
+example_images/
+
+# diagnostic / scratch images
+*.png
