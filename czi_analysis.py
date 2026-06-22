@@ -151,23 +151,3 @@ def save_result_image(arr, nuclei, centroids_rc, output_path: Path):
     plt.tight_layout()
     fig.savefig(output_path, bbox_inches="tight")
     plt.close(fig)
-
-
-def visualize_napari(arr, segmented, centroids_rc, nuclei):
-    import napari
-
-    viewer = napari.Viewer(title="Nucleus detection")
-    viewer.add_image(arr, name="DAPI", colormap="blue", contrast_limits=(0, arr.max()))
-    viewer.add_labels(segmented, name="Segmentation")
-    viewer.add_points(
-        centroids_rc,
-        name="Nuclei centroids",
-        size=20,
-        face_color="yellow",
-        text={
-            "string": [str(n["id"]) for n in nuclei],
-            "size": 10,
-            "color": "white",
-        },
-    )
-    napari.run()

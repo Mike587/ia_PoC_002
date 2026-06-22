@@ -1,4 +1,0 @@
-
-
-run this:
- pixi run python .\analyze_czi.py .\experiment_pos_000077.czi .\output_test\
