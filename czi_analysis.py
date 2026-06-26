@@ -1,3 +1,18 @@
+"""
+czi_analysis.py — ANALYSIS-SPECIFIC logic for ia_PoC_002 (nucleus detection).
+
+This is the part you REPLACE when building a new SmartMic image analysis. None
+of it is part of the SmartMic contract (that lives in `analyze_czi.py`). Here
+that contract is satisfied by:
+
+  * get_scene_center_positions() — read the per-scene stage centre from the CZI
+    metadata, so detected features can be expressed as absolute stage coords.
+  * find_nuclei()                — the actual detection; returns objects carrying
+    `abs_x_m` / `abs_y_m` (the only fields SmartMic strictly needs).
+  * save_result_image()          — optional QC overlay (not consumed by SmartMic).
+
+Swap these for your own detection while keeping the absolute-coordinate output.
+"""
 from pathlib import Path
 
 import numpy as np

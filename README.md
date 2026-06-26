@@ -17,30 +17,39 @@ keeping the same input/output contract described below.
 
 SmartMic invokes this project as a **subprocess** from
 `MS_SmartMic_PoC.py` (via `MS_image_analysis.run_analysis`), running it in *this*
-project's pixi environment. The contract is deliberately simple and
-language/-dependency-agnostic:
+project's pixi environment. The launcher always calls the **same fixed CLI**, so
+any analysis project is interchangeable:
 
-- **Input:** SmartMic passes a CZI path + an output directory (and optional
-  `--prefix` / `--offset`) on the command line.
-- **Output:** the script writes a `*_nuclei.json` into the output directory;
-  SmartMic reads that JSON back and uses the absolute stage coordinates to drive
-  the stage to each detected target for detailed acquisition.
+```sh
+pixi run python <analysis_script> <path_to_czi> <output_dir> --prefix <tag>
+```
+
+- **Input:** SmartMic passes the CZI path, an output directory, and `--prefix`
+  (a per-position tag like `D9_P1`). These three are the standard contract — do
+  not change this signature.
+- **Output:** the script writes a `<prefix>_targets.json` into the output
+  directory; SmartMic reads that JSON back and uses the absolute stage
+  coordinates to drive the stage to each detected target for detailed
+  acquisition.
 
 Keep that contract and SmartMic does not care what happens in between — that is
-what makes this a reusable scaffold.
+what makes this a reusable scaffold. The code marks the **GENERAL** (contract)
+parts and the **ANALYSIS-SPECIFIC** parts with banner comments:
+`analyze_czi.py` is the general scaffold; `czi_analysis.py` is the
+analysis-specific logic you replace.
 
 ## Files
 
-| File | Role |
-|------|------|
-| `analyze_czi.py` | Entry point. Detects nuclei in a CZI and writes `*_nuclei.json`, `*_analysis.log`, `*_nuclei_overlay.png`. |
-| `czi_analysis.py` | Detection logic: scene-center positions from metadata + Otsu/watershed nucleus segmentation + overlay rendering. |
-| `read_czi_metadata.py` | Dev helper: dump a CZI's metadata XML and print the detected-nuclei table. |
+| File | Role | Scope |
+|------|------|-------|
+| `analyze_czi.py` | Entry point / scaffold. Implements the SmartMic CLI contract, sets up logging, and writes `*_targets.json`, `*_analysis.log`, `*_nuclei_overlay.png`. | **General** — keep |
+| `czi_analysis.py` | Detection logic: scene-center positions from metadata + Otsu/watershed nucleus segmentation + overlay rendering. | Analysis-specific — replace |
+| `read_czi_metadata.py` | Dev helper: dump a CZI's metadata XML and print the detected-nuclei table. | Analysis-specific — dev only |
 
 ## Usage
 
 ```sh
-pixi run python analyze_czi.py <path_to_czi> <output_dir> [--prefix PREFIX] [--offset DX DY]
+pixi run python analyze_czi.py <path_to_czi> <output_dir> [--prefix PREFIX]
 ```
 
 Example:
@@ -48,9 +57,6 @@ Example:
 ```sh
 pixi run python analyze_czi.py experiment_pos_000077.czi output_test/ --prefix D3_P1
 ```
-
-`--offset DX DY` applies a camera-centre offset correction in metres (e.g.
-`--offset 44e-6 9e-6`) for calibration not stored in the CZI.
 
 Inspect a CZI's metadata / detection table without writing outputs:
 
@@ -65,11 +71,11 @@ Each run writes three files to `<output_dir>`, all sharing the optional
 
 | File | Description |
 |------|-------------|
-| `{prefix}_nuclei.json` | **The machine-readable result SmartMic consumes** — a JSON array of detected targets (see spec below). |
+| `{prefix}_targets.json` | **The machine-readable result SmartMic consumes** — a JSON array of detected targets (see spec below). |
 | `{prefix}_analysis.log` | Human-readable log of the run (image shape, pixel size, per-scene stage positions, detection summary). |
 | `{prefix}_nuclei_overlay.png` | DAPI image with each detected nucleus ID annotated at its centroid — for visual QC. |
 
-### `*_nuclei.json` specification
+### `*_targets.json` specification
 
 A JSON **array** of objects, one per detected target. Edge-touching regions and
 regions smaller than `min_area_m2` (default 25 µm²) are excluded; at most
@@ -79,7 +85,7 @@ was detected.
 | Field | Type | Units | Meaning |
 |-------|------|-------|---------|
 | `id` | int | — | Region label, unique within this image. |
-| `abs_x_m` | float | metres | **Absolute stage X** of the target centroid (scene centre + in-image offset, plus any `--offset`). This is what SmartMic moves the stage to. |
+| `abs_x_m` | float | metres | **Absolute stage X** of the target centroid (scene centre + in-image offset). This is what SmartMic moves the stage to. |
 | `abs_y_m` | float | metres | **Absolute stage Y** of the target centroid. |
 | `area_m2` | float | m² | Segmented area of the region. |
 | `centroid_col` | int | pixels | Centroid column (X) in the image — used for the overlay annotation. |
