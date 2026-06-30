@@ -118,3 +118,7 @@ was detected.
   }
 ]
 ```
+
+## License
+
+Released under the [MIT License](LICENSE), © 2026 ETH Zurich (ScopeM).
