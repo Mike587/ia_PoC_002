@@ -85,11 +85,15 @@ def get_scene_center_positions(img: BioImage) -> list[dict]:
 
 
 def find_nuclei(img: BioImage, scene_center: dict, max_nuclei: int = 1000,
-                min_area_m2: float = 25e-12):
+                min_area_m2: float = 25e-12, min_peak_distance_m: float = 5e-6):
     """
     Detect nuclei in the DAPI channel via Otsu threshold + watershed.
     Rejects nuclei touching the image border and smaller than min_area_m2.
-    Returns (nuclei list, raw array, label image, centroid array [row, col]).
+    min_peak_distance_m (default 5 µm) is converted to pixels via the image's
+    physical pixel size, so watershed seeding stays consistent across
+    objectives/binning instead of using a fixed pixel count.
+    Returns (nuclei list, raw array, label image, centroid array [row, col],
+    truncated flag — True if more qualifying nuclei existed than max_nuclei).
     """
     pixel_size_y = img.physical_pixel_sizes.Y * 1e-6  # µm -> m
     pixel_size_x = img.physical_pixel_sizes.X * 1e-6
@@ -103,7 +107,8 @@ def find_nuclei(img: BioImage, scene_center: dict, max_nuclei: int = 1000,
     binary = opening(binary, disk(3))
 
     distance = ndi.distance_transform_edt(binary)
-    peak_coords = peak_local_max(distance, min_distance=15, labels=binary)
+    min_peak_distance_px = max(1, round(min_peak_distance_m / pixel_size_x))
+    peak_coords = peak_local_max(distance, min_distance=min_peak_distance_px, labels=binary)
     peak_mask = np.zeros_like(distance, dtype=bool)
     peak_mask[tuple(peak_coords.T)] = True
     markers = label(peak_mask)
@@ -113,15 +118,22 @@ def find_nuclei(img: BioImage, scene_center: dict, max_nuclei: int = 1000,
     props = regionprops(segmented)
     cx_m = scene_center["center_x_m"]
     cy_m = scene_center["center_y_m"]
+    if cx_m is None or cy_m is None:
+        raise ValueError(
+            f"Scene {scene_center.get('index')!r} has no CenterPosition in CZI "
+            "metadata; cannot compute absolute stage coordinates for detected nuclei."
+        )
+
+    qualifying = [
+        (region, area_m2) for region in props
+        if (area_m2 := region.area * pixel_size_x * pixel_size_y) >= min_area_m2
+    ]
+    truncated = len(qualifying) > max_nuclei
+    qualifying = qualifying[:max_nuclei]
 
     nuclei = []
     centroids_rc = []
-    for region in props:
-        area_m2 = region.area * pixel_size_x * pixel_size_y
-        if area_m2 < min_area_m2:
-            continue
-        if len(nuclei) >= max_nuclei:
-            break
+    for region, area_m2 in qualifying:
         row, col = region.centroid
         dx = (col - width / 2) * pixel_size_x
         dy = (row - height / 2) * pixel_size_y
@@ -135,7 +147,7 @@ def find_nuclei(img: BioImage, scene_center: dict, max_nuclei: int = 1000,
         })
         centroids_rc.append([row, col])
 
-    return nuclei, arr, segmented, np.array(centroids_rc)
+    return nuclei, arr, segmented, np.array(centroids_rc), truncated
 
 
 def save_result_image(arr, nuclei, centroids_rc, output_path: Path):

@@ -22,6 +22,9 @@ meta_xml = ET.tostring(img.metadata, encoding="unicode")
 print(minidom.parseString(meta_xml).toprettyxml(indent="  "))
 
 positions = get_scene_center_positions(img)
+if not positions:
+    print("No <Scene> elements found in CZI metadata; cannot determine stage positions.")
+    raise SystemExit(1)
 
 print("\n--- Scene center positions ---")
 for p in positions:
@@ -30,7 +33,9 @@ for p in positions:
     print(f"    Planned:          X={p['planned_x_m']} m, Y={p['planned_y_m']} m")
 
 print("\n--- Nucleus detection ---")
-nuclei, *_ = find_nuclei(img, scene_center=positions[0])
+nuclei, _arr, _seg, _cents, truncated = find_nuclei(img, scene_center=positions[0])
+if truncated:
+    print("Warning: nucleus count reached max_nuclei; some qualifying nuclei were left out.")
 print(f"Found {len(nuclei)} nuclei (max 1000, edge-touching excluded)\n")
 print(f"{'ID':>4}  {'Abs X (m)':>18}  {'Abs Y (m)':>18}  {'Area (m²)':>14}")
 print("-" * 62)

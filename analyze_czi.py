@@ -96,15 +96,22 @@ def main():
     log.info(f"Scene count:        {len(img.scenes)}")
 
     positions = get_scene_center_positions(img)
+    if not positions:
+        log.error("No <Scene> elements found in CZI metadata; cannot determine stage positions.")
+        sys.exit(1)
     for p in positions:
         def fmt(v): return f"{v:.6e} m" if v is not None else "n/a"
         log.info(f"Scene {p['index']} ({p['name']}): "
                  f"actual X={fmt(p['actual_x_m'])}  Y={fmt(p['actual_y_m'])}  "
                  f"(planned X={fmt(p['planned_x_m'])}  Y={fmt(p['planned_y_m'])})")
 
+    max_nuclei = 1000
     log.info("Running nucleus detection (Otsu + watershed, edge-touching rejected, min area 25 µm²)...")
-    nuclei, _arr, _seg, _cents = find_nuclei(img, scene_center=positions[0], max_nuclei=1000)
-    log.info(f"Detected {len(nuclei)} nuclei (edge-touching excluded, max 1000)")
+    nuclei, _arr, _seg, _cents, truncated = find_nuclei(img, scene_center=positions[0], max_nuclei=max_nuclei)
+    log.info(f"Detected {len(nuclei)} nuclei (edge-touching excluded, max {max_nuclei})")
+    if truncated:
+        log.warning(f"Nucleus count reached max_nuclei={max_nuclei}; "
+                     "some qualifying nuclei were left out of the output.")
 
     if nuclei:
         areas = [n["area_m2"] for n in nuclei]
