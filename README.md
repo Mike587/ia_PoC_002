@@ -1,5 +1,13 @@
 # ia_PoC_002 — image-analysis scaffold for SmartMic
 
+> **Retired (2026-11-11).** Superseded by
+> [ia_PoC_004](https://github.com/Mike587/ia_PoC_004), which does the same nuclei
+> detection on top of [ia_common](https://github.com/Mike587/ia_common) (shared CZI
+> reading, pixel ↔ stage, the SmartMic script contract). On both example overviews
+> it finds the same nuclei, at positions within 0.3 µm. The SmartMic proof of concept
+> uses ia_PoC_004. This repository is kept read-only for reference; for a new
+> analysis start from ia_common's `templates/analyze_template.py`.
+
 A standalone CZI image-analysis project that runs in its **own pixi environment**,
 so its analysis dependencies (bioio, scikit-image, scipy, matplotlib) stay
 isolated from the ZEN-API environment used to drive the microscope.
